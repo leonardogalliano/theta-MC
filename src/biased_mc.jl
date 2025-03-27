@@ -51,7 +51,7 @@ function Arianna.make_step!(simulation::Simulation, algorithm::BiasedMonteCarlo)
             logp₂ = log_bias(simulation.chains[c], algorithm.bias)
             Δlogp = logp₂ - algorithm.log_bias_cache[c]
             α = min(one(typeof(Δlogp)), exp(Δlogp))
-            if α > rand(rng)
+            if α > rand(algorithm.rngs[c])
                 algorithm.memories[c] = deepcopy(simulation.chains[c])
                 algorithm.log_bias_cache[c] = logp₂
                 algorithm.accepted_calls[c] += 1
