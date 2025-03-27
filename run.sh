@@ -11,7 +11,6 @@
 #
 
 #SBATCH -J theta
-#SBATCH --ntasks=10
 #SBATCH --cpus-per-task=1
 #SBATCH --output=./log_output/%x.o%j
 #SBATCH --error=./log_error/%x.e%j
