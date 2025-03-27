@@ -39,7 +39,7 @@ function main(args)
     algorithm_list = (
         (algorithm=Metropolis, pool=pool, seed=seed, parallel=true, sweepstep=N),
         (algorithm=BiasedMonteCarlo, bias=ThetaBias(λ), seed=seed, parallel=true, scheduler=biastimes),
-        (algorithm=StoreCallbacks, callbacks=(callback_acceptance,), scheduler=sampletimes),
+        (algorithm=StoreCallbacks, callbacks=(callback_acceptance, callback_overlaps), scheduler=sampletimes),
         (algorithm=StoreCallbacks, callbacks=(callback_bias_acceptance,), scheduler=sampletimes_bias),
         (algorithm=StoreTrajectories, scheduler=sampletimes, fmt=XYZ()),
         (algorithm=StoreTheta, scheduler=biastimes),
