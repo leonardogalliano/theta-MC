@@ -10,6 +10,12 @@
 #$ -o log_output/output_$JOB_ID
 #
 
+#SBATCH -J theta
+#SBATCH --ntasks=10
+#SBATCH --cpus-per-task=1
+#SBATCH --output=./log_output/%x.o%j
+#SBATCH --error=./log_error/%x.e%j
+
 # Positional arguments
 if [[ $# -ge 4 ]]; then
   init_file="$1"
