@@ -28,7 +28,7 @@ fi
 # Optional arguments
 lambda="0.0"
 n="1"
-nsim="1"
+threads="1"
 nblocks="1"
 seed="1"
 
@@ -43,8 +43,8 @@ while [[ $# -gt 0 ]]; do
       n="$2"
       shift 2
       ;;
-    --nsim)
-      nsim="$2"
+    --threads)
+      threads="$2"
       shift 2
       ;;
     --nblocks)
@@ -62,4 +62,4 @@ while [[ $# -gt 0 ]]; do
 done
 
 
-julia --project=. -t $nsim main.jl $init_file $steps --lambda $lambda -n $n --nsim $nsim --nblocks $nblocks --seed $seed
+julia --project=. -t $threads main.jl $init_file $steps --lambda $lambda -n $n --nblocks $nblocks --seed $seed
