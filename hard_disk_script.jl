@@ -31,7 +31,8 @@ function main(args)
     seed = args["seed"]
     rng = Xoshiro(seed)
     N = args["N"]
-    NA = N ÷ 2
+    # NA = N ÷ 2
+    NA = ceil(Int, N * args["concentration"])
     NB = N - NA
     M = args["nsim"]
     d = 2
@@ -111,7 +112,8 @@ function main(args)
     pool = (
         Move(Displacement(0, zero(box)), displacement_policy, displacement_parameters, 1.0),
     )
-    path = "data/HardDisks/NVT/density$target_density/N$N/M$M/steps$steps/seed$seed"
+    phi = target_density * π * sum(species[1] .^ 2) / (4 * N)
+    path = "data/HardDisks/NVT/phi$phi/N$N/M$M/steps$steps/seed$seed"
     algorithm_list = (
         (algorithm=Metropolis, pool=pool, seed=seed, parallel=true, sweepstep=N),
         (algorithm=StoreCallbacks, callbacks=(callback_acceptance, callback_overlaps), scheduler=sampletimes),
@@ -144,12 +146,16 @@ function parse_commandline()
         help = "Number of parallel chains"
         arg_type = Int
         default = 1
+        "--concentration", "-x"
+        help = "Concentration of small particles"
+        arg_type = Float64
+        default = 1.0
         "--density", "-D"
         help = "Initial density"
         arg_type = Float64
         default = 0.01
         "--temperature", "-T"
-        help = "temperature"
+        help = "Temperature"
         arg_type = Float64
         default = 1.0
         "--nblocks"
