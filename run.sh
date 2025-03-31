@@ -4,7 +4,6 @@
 #$ -cwd
 #$ -j y
 #$ -N theta
-#$ -m ae
 #$ -S /bin/bash
 #$ -V
 #$ -o log_output/output_$JOB_ID
