@@ -35,7 +35,8 @@ function main(args)
     biastimes = build_schedule(steps, burn, steps_per_bias)
     sampletimes = build_schedule(steps, burn, block)
     sampletimes_bias = build_schedule(steps, burn, steps_per_bias)
-    path = "data/Theta/lambda$λ/n$steps_per_bias/N$N/M$(length(chains))/steps$steps/seed$seed"
+    phi = chains[1].density * π * sum(chains[1].species .^ 2) / (4 * N)
+    path = "data/Theta/phi$phi/lambda$λ/n$steps_per_bias/N$N/M$(length(chains))/steps$steps/seed$seed"
     algorithm_list = (
         (algorithm=Metropolis, pool=pool, seed=seed, parallel=true, sweepstep=N),
         (algorithm=BiasedMonteCarlo, bias=ThetaBias(λ), seed=seed, parallel=true, scheduler=biastimes),

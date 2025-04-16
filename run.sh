@@ -61,4 +61,4 @@ while [[ $# -gt 0 ]]; do
 done
 
 
-julia --project=. -t $threads main.jl $init_file $steps --lambda $lambda -n $n --nblocks $nblocks --seed $seed
+julia --project=. -t $threads main.jl $init_file $steps --lambda $lambda -n $n --nblocks $nblocks --seed $seed -v
