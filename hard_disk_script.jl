@@ -65,8 +65,7 @@ function main(args)
     burn = 0
     block = append!([0], [2^n for n in 0:floor(Int, log2(args["steps"] / args["nblocks"]))])
     sampletimes = build_schedule(steps, burn, block)
-    path = "data/HardDisks/NPT/P$pressure/N$N/M$M/steps$steps/seed$seed"
-
+    path = joinpath(args["out_path"], "NPT", "P$pressure", "N$N", "M$M", "steps$steps", "seed$seed")
     # Remove overlaps from initial conditions
     displacement_policy = SimpleGaussian()
     displacement_parameters = ComponentArray(σ=args["delta_x"])
@@ -125,7 +124,7 @@ function main(args)
             Move(Displacement(0, zero(box)), displacement_policy, displacement_parameters, 1.0),
         )
         phi = target_density * π * sum(chains[1].species .^ 2) / (4 * N)
-        path = "data/HardDisks/NVT/phi$phi/N$N/M$M/steps$steps/seed$seed"
+        path = joinpath(args["out_path"], "NVT", "phi$phi", "N$N", "M$M", "steps$steps", "seed$seed")
         algorithm_list = (
             (algorithm=Metropolis, pool=pool, seed=seed, parallel=true, sweepstep=N),
             (algorithm=StoreCallbacks, callbacks=(callback_acceptance, callback_overlaps), scheduler=sampletimes),
@@ -187,6 +186,10 @@ function parse_commandline()
         help = "Path to the initial configurations (overwrites everything)"
         arg_type = String
         default = ""
+        "--out_path"
+        help = "Path to the initial configurations (overwrites everything)"
+        arg_type = String
+        default = "data/HardDisks/"
         "--nblocks"
         help = "Number of log2 blocks"
         arg_type = Int
