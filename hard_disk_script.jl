@@ -105,6 +105,7 @@ function main(args)
         (algorithm=StoreCallbacks, callbacks=(callback_acceptance,callback_overlaps), scheduler=sampletimes),
         (algorithm=StoreTrajectories, scheduler=sampletimes, fmt=XYZ()),
         (algorithm=StoreLastFrames, scheduler=[steps], fmt=XYZ()),
+        (algorithm=StoreTheta, scheduler=sampletimes),
         (algorithm=StorePressure, scheduler=sampletimes),
         (algorithm=StorePackingFraction, scheduler=sampletimes),
         (algorithm=PrintTimeSteps, scheduler=build_schedule(steps, burn, steps ÷ 10)),
