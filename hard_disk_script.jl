@@ -33,6 +33,7 @@ function main(args)
     seed = args["seed"]
     rng = Xoshiro(seed)
     pressure = args["pressure"]
+    compression_rate = args["compression_rate"]
 
     if isempty(args["init_file"])
         N = args["N"]
@@ -65,7 +66,7 @@ function main(args)
     burn = 0
     block = append!([0], [2^n for n in 0:floor(Int, log2(args["steps"] / args["nblocks"]))])
     sampletimes = build_schedule(steps, burn, block)
-    path = joinpath(args["out_path"], "NPT", "P$pressure", "N$N", "M$M", "steps$steps", "seed$seed")
+    path = joinpath(args["out_path"], "NPT", "P$pressure", "rate$compression_rate", "N$N", "M$M", "steps$steps", "seed$seed")
     # Remove overlaps from initial conditions
     displacement_policy = SimpleGaussian()
     displacement_parameters = ComponentArray(σ=args["delta_x"])
@@ -100,7 +101,7 @@ function main(args)
 
     algorithm_list = (
         (algorithm=Metropolis, pool=pool, seed=seed, parallel=true, sweepstep=N),
-        (algorithm=Compression, dependencies=(Metropolis,), rate=args["compression_rate"]),
+        (algorithm=Compression, dependencies=(Metropolis,), rate=compression_rate),
         (algorithm=StoreCallbacks, callbacks=(callback_acceptance,callback_overlaps), scheduler=sampletimes),
         (algorithm=StoreTrajectories, scheduler=sampletimes, fmt=XYZ()),
         (algorithm=StoreLastFrames, scheduler=[steps], fmt=XYZ()),
