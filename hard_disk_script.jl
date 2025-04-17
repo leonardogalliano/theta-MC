@@ -177,7 +177,7 @@ function parse_commandline()
         "--delta_V"
         help = "Amplitude of volume change"
         arg_type = Float64
-        default = 0.1
+        default = 1.0
         "--compression_rate"
         help = "Compression rate in NPT simulation"
         arg_type = Float64
