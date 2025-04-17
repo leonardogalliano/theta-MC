@@ -7,6 +7,8 @@ using Random
 using ComponentArrays
 using ArgParse
 
+include("src/compression.jl")
+
 function affine_transformation!(system, density)
     λ = (system.density / density) ^ (1 / system.d)
     system.density = density
@@ -30,19 +32,33 @@ function main(args)
     # Create chains
     seed = args["seed"]
     rng = Xoshiro(seed)
-    N = args["N"]
-    # NA = N ÷ 2
-    NA = ceil(Int, N * args["concentration"])
-    NB = N - NA
-    M = args["nsim"]
-    d = 2
-    temperature = args["temperature"]
-    density = args["density"]
     pressure = args["pressure"]
-    box = @SVector fill(typeof(temperature)((N / density)^(1 / d)), d)
-    position = [[box .* @SVector rand(rng, d) for i in 1:N] for m in 1:M]
-    species = [shuffle!(rng, vcat(ones(NA), 1.4 * ones(NB))) for _ in 1:M]
-    chains = [System(position[m], species[m], density, temperature, HardCore(); list_type=LinkedList) for m in 1:M]
+
+    if isempty(args["init_file"])
+        N = args["N"]
+        NA = ceil(Int, N * args["concentration"])
+        NB = N - NA
+        M = args["nsim"]
+        d = 2
+        temperature = args["temperature"]
+        density = args["density"]
+        box = @SVector fill(typeof(temperature)((N / density)^(1 / d)), d)
+        position = [[box .* @SVector rand(rng, d) for i in 1:N] for m in 1:M]
+        species = [shuffle!(rng, vcat(ones(NA), 1.4 * ones(NB))) for _ in 1:M]
+        chains = [System(position[m], species[m], density, temperature, HardCore(); list_type=LinkedList) for m in 1:M]
+    else
+        args["model"] = "HardCore"
+        delete!(args, "density")
+        delete!(args, "temperature")
+        delete!(args, "nsim")
+        chains = load_chains(args["init_file"]; args=args, verbose=args["verbose"])
+        N = length(chains[1].position)
+        M = length(chains)
+        d = chains[1].d
+        temperature = chains[1].temperature
+        density = chains[1].density
+        box = chains[1].box
+    end
 
     # Simulation parameters
     steps = args["steps"]
@@ -53,7 +69,7 @@ function main(args)
 
     # Remove overlaps from initial conditions
     displacement_policy = SimpleGaussian()
-    displacement_parameters = ComponentArray(σ=0.2)
+    displacement_parameters = ComponentArray(σ=args["delta_x"])
     pool = (
         Move(Displacement(0, zero(box)), displacement_policy, displacement_parameters, 1.0),
     )
@@ -75,28 +91,22 @@ function main(args)
 
     # Run NPT
     displacement_policy = SimpleGaussian()
-    displacement_parameters = ComponentArray(σ=0.2)
+    displacement_parameters = ComponentArray(σ=args["delta_x"])
     barostat_policy = SimpleGaussian()
-    barostat_parameters = ComponentArray(σ=1.0)
+    barostat_parameters = ComponentArray(σ=args["delta_V"])
     pool = (
         Move(Displacement(0, zero(box)), displacement_policy, displacement_parameters, 1 - 1 / N),
         Move(Barostat(pressure, 0.0), barostat_policy, barostat_parameters, 1 / N),
     )
 
-    ## PGMC parameters
-    #optimisers = (BLAPG(1e-5, 1e-4), Static())
-    # pgmc_start = 10^4
-    # estimator_scheduler = build_schedule(steps, pgmc_start, 1)
-    # learner_scheduler = build_schedule(steps, pgmc_start, 10)
-
     algorithm_list = (
         (algorithm=Metropolis, pool=pool, seed=seed, parallel=true, sweepstep=N),
-        # (algorithm=PolicyGradientEstimator, dependencies=(Metropolis,), optimisers=optimisers, q_batch_size=20, parallel=true, scheduler=estimator_scheduler),
-        # (algorithm=PolicyGradientUpdate, dependencies=(PolicyGradientEstimator,), scheduler=learner_scheduler),
+        (algorithm=Compression, dependencies=(Metropolis,), rate=args["compression_rate"]),
         (algorithm=StoreCallbacks, callbacks=(callback_acceptance,callback_overlaps), scheduler=sampletimes),
         (algorithm=StoreTrajectories, scheduler=sampletimes, fmt=XYZ()),
         (algorithm=StoreLastFrames, scheduler=[steps], fmt=XYZ()),
-        # (algorithm=StoreParameters, dependencies=(Metropolis,), scheduler=sampletimes),
+        (algorithm=StorePressure, scheduler=sampletimes),
+        (algorithm=StorePackingFraction, scheduler=sampletimes),
         (algorithm=PrintTimeSteps, scheduler=build_schedule(steps, burn, steps ÷ 10)),
     )
     simulation = Simulation(chains, algorithm_list, steps; path=path, verbose=args["verbose"])
@@ -104,26 +114,28 @@ function main(args)
     args["verbose"] && println("Overlaps: $(map(system -> check_overlaps(system), chains))")
 
     # Normalise densities
-    args["verbose"] && println("Normalising densitities...")
-    densities = map(system -> system.N / prod(system.box), chains)
-    target_density = minimum(densities)
-    map(system -> affine_transformation!(system, target_density), chains)
-    args["verbose"] && println("Overlaps: $(map(system -> check_overlaps(system), chains))")
-    pool = (
-        Move(Displacement(0, zero(box)), displacement_policy, displacement_parameters, 1.0),
-    )
-    phi = target_density * π * sum(species[1] .^ 2) / (4 * N)
-    path = "data/HardDisks/NVT/phi$phi/N$N/M$M/steps$steps/seed$seed"
-    algorithm_list = (
-        (algorithm=Metropolis, pool=pool, seed=seed, parallel=true, sweepstep=N),
-        (algorithm=StoreCallbacks, callbacks=(callback_acceptance, callback_overlaps), scheduler=sampletimes),
-        (algorithm=StoreTrajectories, scheduler=sampletimes, fmt=XYZ()),
-        (algorithm=StoreLastFrames, scheduler=[steps], fmt=XYZ()),
-        (algorithm=PrintTimeSteps, scheduler=build_schedule(steps, burn, steps ÷ 10)),
-    )
-    simulation = Simulation(chains, algorithm_list, steps; path=path, verbose=args["verbose"])
-    run!(simulation)
-    args["verbose"] && println("Overlaps: $(map(system -> check_overlaps(system), chains))")
+    if args["do_NVT"]
+        args["verbose"] && println("Normalising densitities...")
+        densities = map(system -> system.N / prod(system.box), chains)
+        target_density = minimum(densities)
+        map(system -> affine_transformation!(system, target_density), chains)
+        args["verbose"] && println("Overlaps: $(map(system -> check_overlaps(system), chains))")
+        pool = (
+            Move(Displacement(0, zero(box)), displacement_policy, displacement_parameters, 1.0),
+        )
+        phi = target_density * π * sum(chains[1].species .^ 2) / (4 * N)
+        path = "data/HardDisks/NVT/phi$phi/N$N/M$M/steps$steps/seed$seed"
+        algorithm_list = (
+            (algorithm=Metropolis, pool=pool, seed=seed, parallel=true, sweepstep=N),
+            (algorithm=StoreCallbacks, callbacks=(callback_acceptance, callback_overlaps), scheduler=sampletimes),
+            (algorithm=StoreTrajectories, scheduler=sampletimes, fmt=XYZ()),
+            (algorithm=StoreLastFrames, scheduler=[steps], fmt=XYZ()),
+            (algorithm=PrintTimeSteps, scheduler=build_schedule(steps, burn, steps ÷ 10)),
+        )
+        simulation = Simulation(chains, algorithm_list, steps; path=path, verbose=args["verbose"])
+        run!(simulation)
+        args["verbose"] && println("Overlaps: $(map(system -> check_overlaps(system), chains))")
+    end
 
 end
 
@@ -149,7 +161,7 @@ function parse_commandline()
         "--concentration", "-x"
         help = "Concentration of small particles"
         arg_type = Float64
-        default = 1.0
+        default = 0.65
         "--density", "-D"
         help = "Initial density"
         arg_type = Float64
@@ -158,10 +170,29 @@ function parse_commandline()
         help = "Temperature"
         arg_type = Float64
         default = 1.0
+        "--delta_x"
+        help = "Amplitude of displacement"
+        arg_type = Float64
+        default = 0.2
+        "--delta_V"
+        help = "Amplitude of volume change"
+        arg_type = Float64
+        default = 0.1
+        "--compression_rate"
+        help = "Compression rate in NPT simulation"
+        arg_type = Float64
+        default = 0.0
+        "--init_file"
+        help = "Path to the initial configurations (overwrites everything)"
+        arg_type = String
+        default = ""
         "--nblocks"
         help = "Number of log2 blocks"
         arg_type = Int
         default = 1
+        "--do_NVT"
+        help = "Run extra NVT simulation after NPT to fix volume"
+        action = :store_true
         "--verbose", "-v"
         help = "verbose"
         action = :store_true

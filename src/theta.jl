@@ -68,7 +68,9 @@ end
 ###############################################################################
 # CALLBACK
 
-struct StoreTheta <: AriannaAlgorithm
+abstract type CallbackAlgorithm <: AriannaAlgorithm end
+
+struct StoreTheta <: CallbackAlgorithm
     paths::Vector{String}
     files::Vector{IOStream}
     store_first::Bool
@@ -93,8 +95,8 @@ function StoreTheta(chains; path=missing, store_first=true, store_last=false, ex
     return StoreTheta(chains, path, store_first=store_first, store_last=store_last)
 end
 
-function Arianna.initialise(algorithm::StoreTheta, simulation::Simulation)
-    simulation.verbose && println("Opening theta files...")
+function Arianna.initialise(algorithm::CallbackAlgorithm, simulation::Simulation)
+    simulation.verbose && println("Opening " * replace(string(typeof(algorithm)), r"\{.*" => "") * " files...")
     algorithm.files .= open.(algorithm.paths, "w")
     algorithm.store_first && Arianna.make_step!(simulation, algorithm)
     return nothing
@@ -108,9 +110,8 @@ function Arianna.make_step!(simulation::Simulation, algorithm::StoreTheta)
     end
 end
 
-function Arianna.finalise(algorithm::StoreTheta, simulation::Simulation)
-    algorithm.store_last && Arianna.make_step!(simulation, algorithm)
-    simulation.verbose && println("Closing theta files...")
+function Arianna.finalise(algorithm::CallbackAlgorithm, simulation::Simulation)
+    simulation.verbose && println("Closing " * replace(string(typeof(algorithm)), r"\{.*" => "") * " files...")
     close.(algorithm.files)
     return nothing
 end
