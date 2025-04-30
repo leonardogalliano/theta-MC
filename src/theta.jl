@@ -66,6 +66,38 @@ function get_theta_voronoi(system; border=2.0)
 end
 
 ###############################################################################
+# SHELL
+
+neig_tolerance(σi, σj) = (σi + σj) / 4
+
+function neighbour_list(X, sizes, box; list=eachindex(X))
+    return [findall(j -> 0 < norm(nearest_image_distance(X[i], X[j], box)) ≤ (sizes[i] + sizes[j]) / 2 + neig_tolerance(sizes[i], sizes[j]), list) for i in list]
+end
+
+function global_theta_shell(X::Vector{SVector{d,T}}, sizes, box) where {d,T<:AbstractFloat}
+    neig_list = neighbour_list(X, sizes, box)
+    Θ = zero(T)
+    for o in eachindex(X)
+        ∂o = neig_list[o]
+        θo = zero(T)
+        n = 0
+        for i in ∂o
+            ∂i = neig_list[i]
+            for j in ∂i
+                if j < i && j in ∂o
+                    θ1 = theta(norm(nearest_image_distance(X[i], X[j], box)), norm(nearest_image_distance(X[o], X[i], box)), norm(nearest_image_distance(X[o], X[j], box)))
+                    θ2 = theta((sizes[i] + sizes[j]) / 2, (sizes[o] + sizes[i]) / 2, (sizes[o] + sizes[j]) / 2)
+                    θo += abs(θ1 - θ2)
+                    n += 1
+                end
+            end
+        end
+        Θ += θo / n
+    end
+    return Θ / length(X)
+end
+
+###############################################################################
 # CALLBACK
 
 abstract type CallbackAlgorithm <: AriannaAlgorithm end
