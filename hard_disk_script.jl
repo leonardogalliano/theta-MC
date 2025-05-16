@@ -188,7 +188,7 @@ function parse_commandline()
         arg_type = String
         default = ""
         "--out_path"
-        help = "Path to the initial configurations (overwrites everything)"
+        help = "Output path"
         arg_type = String
         default = "data/HardDisks/"
         "--nblocks"

@@ -30,6 +30,8 @@ n="1"
 threads="1"
 nblocks="1"
 seed="1"
+out_path=""
+pressure=""
 
 # Read options
 while [[ $# -gt 0 ]]; do
@@ -54,11 +56,30 @@ while [[ $# -gt 0 ]]; do
       seed="$2"
       shift 2
       ;;
+    --out_path)
+      out_path="$2"
+      shift 2
+      ;;
+    --pressure)
+      pressure="$2"
+      shift 2
+      ;;
     *)
       shift
       ;;
   esac
 done
 
+if [[ -z "$out_path" ]]; then
+  dir_flag=""
+else
+  dir_flag="--out_path $out_path"
+fi
 
-julia --project=. -t $threads main.jl $init_file $steps --lambda $lambda -n $n --nblocks $nblocks --seed $seed -v
+if [[ -z "$pressure" ]]; then
+  pressure_flag=""
+else
+  pressure_flag="--pressure $pressure"
+fi
+
+julia --project=. -t $threads main.jl $init_file $steps --lambda $lambda -n $n --nblocks $nblocks --seed $seed -v $dir_flag $pressure_flag
