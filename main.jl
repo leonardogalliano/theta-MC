@@ -44,7 +44,8 @@ function main(args)
     steps_per_bias = args["reversible_steps"]
     biastimes = build_schedule(steps, burn, steps_per_bias)
     sampletimes = build_schedule(steps, burn, block)
-    sampletimes_bias = build_schedule(steps, burn, steps_per_bias)
+    # sampletimes_bias = build_schedule(steps, burn, steps_per_bias)
+    sampletimes_bias = sampletimes # to reduce data size
     phi = chains[1].density * π * sum(chains[1].species .^ 2) / (4 * N)
     p_or_phi = (isfinite(args["pressure"]) && args["pressure"] > 0) ? "P$(args["pressure"])" : "phi$phi"
     path = joinpath(args["out_path"], p_or_phi, "lambda$λ", "n$steps_per_bias", "N$N", "M$(length(chains))", "steps$steps", "seed$seed")
@@ -54,7 +55,7 @@ function main(args)
         (algorithm=StoreCallbacks, callbacks=(callback_acceptance, callback_overlaps), scheduler=sampletimes),
         (algorithm=StoreCallbacks, callbacks=(callback_bias_acceptance,), scheduler=sampletimes_bias),
         (algorithm=StoreTrajectories, scheduler=sampletimes, fmt=XYZ()),
-        (algorithm=StoreTheta, scheduler=biastimes),
+        (algorithm=StoreTheta, scheduler=sampletimes_bias),
         (algorithm=StorePackingFraction, scheduler=sampletimes),
         (algorithm=StoreLastFrames, scheduler=[steps], fmt=XYZ()),
         (algorithm=PrintTimeSteps, scheduler=build_schedule(steps, burn, steps ÷ 10)),
