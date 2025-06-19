@@ -58,13 +58,16 @@ function Arianna.make_step!(simulation::Simulation, algorithm::StorePressure)
     end
 end
 
-struct StorePackingFraction <: CallbackAlgorithm
+mutable struct StorePackingFraction <: CallbackAlgorithm
     paths::Vector{String}
     files::Vector{IOStream}
     store_first::Bool
     store_last::Bool
+    ϕ::Float64
+    n::Int
+    Δm::Int
 
-    function StorePackingFraction(chains, path; store_first::Bool=true, store_last::Bool=false)
+    function StorePackingFraction(chains, path; store_first::Bool=true, store_last::Bool=false, Δm::Int=1)
         dirs = joinpath.(path, "trajectories", ["$c" for c in eachindex(chains)])
         mkpath.(dirs)
         paths = joinpath.(dirs, "phi.dat")
@@ -74,21 +77,29 @@ struct StorePackingFraction <: CallbackAlgorithm
         finally
             close.(files)
         end
-        return new(paths, files, store_first, store_last)
+        ϕ = 0.0
+        n = 0
+        return new(paths, files, store_first, store_last, ϕ, n, Δm)
     end
 
 end
 
-function StorePackingFraction(chains; path=missing, store_first=true, store_last=false, extras...)
-    return StorePackingFraction(chains, path, store_first=store_first, store_last=store_last)
+function StorePackingFraction(chains; path=missing, Δm=1, store_first=true, store_last=false, extras...)
+    return StorePackingFraction(chains, path, store_first=store_first, store_last=store_last, Δm=Δm)
 end
 
 function Arianna.make_step!(simulation::Simulation, algorithm::StorePackingFraction)
     for c in eachindex(simulation.chains)
         system = simulation.chains[c]
-        phi = system.density * π * sum(system.species .^ 2) / (4 * system.N)
-        println(algorithm.files[c], "$(simulation.t) $phi")
-        flush(algorithm.files[c])
+        algorithm.ϕ += system.density * π * sum(system.species .^ 2) / (4 * system.N)
+        algorithm.n += 1
+        if simulation.t % algorithm.Δm == 0
+            ϕ = algorithm.ϕ / algorithm.n
+            println(algorithm.files[c], "$(simulation.t) $ϕ")
+            flush(algorithm.files[c])
+            algorithm.ϕ = 0.0
+            algorithm.n = 0
+        end
     end
 end
 

@@ -99,6 +99,8 @@ function main(args)
         Move(Barostat(pressure, 0.0), barostat_policy, barostat_parameters, 1 / N),
     )
 
+    phi_algoritm = args["time_average_phi"] > 0 ? (algorithm=StorePackingFraction, Δm=args["time_average_phi"]) : (algorithm=StorePackingFraction, scheduler=sampletimes)
+
     algorithm_list = (
         (algorithm=Metropolis, pool=pool, seed=seed, parallel=true, sweepstep=N),
         (algorithm=Compression, dependencies=(Metropolis,), rate=compression_rate),
@@ -107,7 +109,7 @@ function main(args)
         (algorithm=StoreLastFrames, scheduler=[steps], fmt=XYZ()),
         (algorithm=StoreTheta, scheduler=sampletimes),
         (algorithm=StorePressure, scheduler=sampletimes),
-        (algorithm=StorePackingFraction, scheduler=sampletimes),
+        phi_algoritm,
         (algorithm=PrintTimeSteps, scheduler=build_schedule(steps, burn, steps ÷ 10)),
     )
     simulation = Simulation(chains, algorithm_list, steps; path=path, verbose=args["verbose"])
@@ -195,6 +197,10 @@ function parse_commandline()
         help = "Number of log2 blocks"
         arg_type = Int
         default = 1
+        "--time_average_phi"
+        help = "If positive, store a time averaged packing fraction every Δm steps"
+        arg_type = Int
+        default = -1
         "--do_NVT"
         help = "Run extra NVT simulation after NPT to fix volume"
         action = :store_true
