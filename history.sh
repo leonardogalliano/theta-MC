@@ -58,3 +58,18 @@ sbatch -J HD -n 8 --output=./log_output/%x.o%j --error=./log_error/%x.e%j --wrap
 ## EOS
 # sbatch -J EOS -n 8 --output=./log_output/%x.o%j --error=./log_error/%x.e%j --wrap "/home/galliano/julia-1.9.0/bin/julia --project=. -t 8 hard_disk_script.jl 200000000 200 200.0 --init_file data/Quenches/P0_25.0/NPT/P200.0/rate0.0/N200/M8/steps200000000/seed1/trajectories -M 8 --nblocks 50 --compression_rate -0.000001 -v --out_path data/EOS/P00_25.0"
 # sbatch -J EOS -n 8 --output=./log_output/%x.o%j --error=./log_error/%x.e%j --wrap "/home/galliano/julia-1.9.0/bin/julia --project=. -t 8 hard_disk_script.jl 200000000 200 200.0 --init_file data/Quenches/P0_10.0/NPT/P200.0/rate0.0/N200/M8/steps200000000/seed1/trajectories -M 8 --nblocks 50 --compression_rate -0.000001 -v --out_path data/EOS/P00_10.0"
+
+
+# TANNING JULY 2025
+## Start simulations for Ludo's sketch
+## First: bulk equilibirum study of the model
+## NPT for some configurations
+## Monitor phi, theta, s(q)
+
+N=200
+steps=10000000
+Ps=(5.0 7.5 10.0 12.5 15.0 17.5 20.0 25.0 30.0 50.0 75.0 100.0 150.0 200.0)
+init_file=data/CM/SOURCES/NVT/phi0.7111927911351156/N200/M8/steps10000000/seed1/trajectories
+for P in "${Ps[@]}"; do
+    screen -S HD_P$P -dm julia --project=. -t auto hard_disk_script.jl $steps $N $P --init_file $init_file -v --nblocks 100
+done

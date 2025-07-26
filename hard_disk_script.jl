@@ -99,11 +99,12 @@ function main(args)
         Move(Barostat(pressure, 0.0), barostat_policy, barostat_parameters, 1 / N),
     )
 
+    compression_algorithm = compression_rate > 0 ? (algorithm=Compression, dependencies=(Metropolis,), rate=compression_rate) : (algorithm=Compression, dependencies=(Metropolis,), rate=compression_rate, scheduler=[steps])
     phi_algoritm = args["time_average_phi"] > 0 ? (algorithm=StorePackingFraction, Δm=args["time_average_phi"]) : (algorithm=StorePackingFraction, scheduler=sampletimes)
 
     algorithm_list = (
         (algorithm=Metropolis, pool=pool, seed=seed, parallel=true, sweepstep=N),
-        (algorithm=Compression, dependencies=(Metropolis,), rate=compression_rate),
+        compression_algorithm,
         (algorithm=StoreCallbacks, callbacks=(callback_acceptance,callback_overlaps), scheduler=sampletimes),
         (algorithm=StoreTrajectories, scheduler=sampletimes, fmt=XYZ()),
         (algorithm=StoreLastFrames, scheduler=[steps], fmt=XYZ()),
