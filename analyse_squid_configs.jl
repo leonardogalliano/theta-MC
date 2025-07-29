@@ -31,23 +31,24 @@ function unnormalised_partial_structure_factor_2d(X1, X2, q::Tuple{T,T}) where {
     )
 end
 
-function generate_q_lattice(box; δq=2π / mean(box), qmax=10.0)
+function generate_q_lattice(box; qsamples=50, qmax=10.0)
     nmax = round(Int, mean(box) * qmax / (2pi * sqrt(2)))
     qlattice = [2π .* (nx, ny) ./ box for nx in -nmax:nmax for ny in 0:nmax]
     qs = norm.(qlattice)
-    qbins = collect(2π/mean(box):δq:maximum(qs))
-    return qlattice, qs, qbins
+    qbins = LinRange(2π / mean(box), maximum(qs), qsamples)
+    δq = qbins[2] - qbins[1]
+    return qlattice, qs, qbins, δq
 end
 
-function structure_factor(X, box; δq=2π / mean(box), qmax=10.0)
-    qlattice, qs, qbins = generate_q_lattice(box; δq=δq, qmax=qmax)
+function structure_factor(X, box; qsamples=50, qmax=10.0)
+    qlattice, qs, qbins, δq = generate_q_lattice(box; qsamples=qsamples, qmax=qmax)
     s2d = map(q -> structure_factor_2d(X, q), qlattice)
     soq = map(qbin -> mean(s2d[findall(q -> qbin ≤ q ≤ qbin + δq, qs)]), qbins)
     return qbins, soq
 end
 
-function partial_structure_factor(X, species, box, sp1, sp2; δq=2π / mean(box), qmax=10.0)
-    qlattice, qs, qbins = generate_q_lattice(box; δq=δq, qmax=qmax)
+function partial_structure_factor(X, species, box, sp1, sp2; qsamples=50, qmax=10.0)
+    qlattice, qs, qbins, δq = generate_q_lattice(box; qsamples=qsamples, qmax=qmax)
     ids1 = findall(isequal(sp1), species)
     ids2 = findall(isequal(sp2), species)
     X1 = @view X[ids1]
@@ -57,8 +58,8 @@ function partial_structure_factor(X, species, box, sp1, sp2; δq=2π / mean(box)
     return qbins, soq
 end
 
-function compressibility(X, species::Vector{T}, box; δq=2π / mean(box), qmax=10.0) where {T<:AbstractFloat}
-    qlattice, qs, qbins = generate_q_lattice(box; δq=δq, qmax=qmax)
+function compressibility(X, species::Vector{T}, box; qsamples=50, qmax=10.0) where {T<:AbstractFloat}
+    qlattice, qs, qbins, δq = generate_q_lattice(box; qsamples=qsamples, qmax=qmax)
     types = unique(species)
     @assert length(types) == 2
     sp1, sp2 = types[1], types[2]
