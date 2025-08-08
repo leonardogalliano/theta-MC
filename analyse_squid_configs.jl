@@ -14,6 +14,32 @@ function load_ludo_config(path)
     return X, sizes, box, ϕ
 end
 
+function load_xyz_trajectory(path::AbstractString)
+    df = readdlm(path)
+    N = df[1, 1]
+    metadata = df[end-N, :]
+    L = parse(Float64, split(metadata[findfirst(x -> !isnothing(x), findfirst.("cell:", metadata))][6:end], ",")[1])
+    last_step = parse(Int, metadata[findfirst(x -> !isnothing(x), findfirst.("step:", metadata))][6:end])
+    column_ids = findall(x -> x isa Number, df[end-N+1, :])
+    sizes = Vector{Float64}(df[3:2+N, 1])
+    steps = Vector{Int}()
+    m = 0
+    flag = true
+    while flag
+        metadata = df[2+(N+2)*m, :]
+        step = parse(Int, metadata[findfirst(x -> !isnothing(x), findfirst.("step:", metadata))][6:end])
+        push!(steps, step)
+        if step == last_step
+            flag = false
+        end
+        m += 1
+    end
+    raw_pos = [df[3+(N+2)*t:3+(N+2)*t+N-1, 2:3] for t in 0:m-1]
+    trj = [[(raw_pos[t][i, 1], raw_pos[t][i, 2]) for i ∈ 1:size(raw_pos[t])[1]] for t in 1:m]
+    box = (L,L)
+    return steps, box, sizes, trj
+end
+
 ########################################################################
 # STRUCRTURE FACTOR
 

@@ -47,7 +47,7 @@ function main(args)
     # sampletimes_bias = build_schedule(steps, burn, steps_per_bias)
     sampletimes_bias = sampletimes # to reduce data size
     phi = chains[1].density * π * sum(chains[1].species .^ 2) / (4 * N)
-    p_or_phi = (isfinite(args["pressure"]) && args["pressure"] > 0) ? "P$(args["pressure"])" : "phi$phi"
+    p_or_phi = (isfinite(args["pressure"]) && args["pressure"] > 0) ? "P$(args["pressure"])" : "NVT"
     path = joinpath(args["out_path"], p_or_phi, "lambda$λ", "n$steps_per_bias", "N$N", "M$(length(chains))", "steps$steps", "seed$seed")
     algorithm_list = (
         (algorithm=Metropolis, pool=pool, seed=seed, parallel=true, sweepstep=N),
