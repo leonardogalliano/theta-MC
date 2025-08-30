@@ -198,5 +198,5 @@ lambdas=(0.0 2500.0 5000.0 7500.0 10000.0 15000.0 20000.0)
 n=5
 for lambda in "${lambdas[@]}"; do
     init_file=data/HardDisksSteady/NPT/P$P/rate0.0/N$N/M1/steps50000000/seed1/trajectories/1/lastframe.xyz
-    sbatch -J HD -n 1 --output=./log_output/%x.o%j --error=./log_error/%x.e%j --wrap "/home/galliano/julia-1.9.0/bin/julia --project=. -t 1 main.jl main.jl $init_file $steps --lambda $lambda -n $n -v --nblocks 10 --out_path data/UmbrellaSampling_SOURCES/P0_$P"
+    sbatch -J HD -n 1 --output=./log_output/%x.o%j --error=./log_error/%x.e%j --wrap "/home/galliano/julia-1.9.0/bin/julia --project=. -t 1 main.jl $init_file $steps --lambda $lambda -n $n -v --nblocks 10 --out_path data/UmbrellaSampling_SOURCES/P0_$P"
 done
