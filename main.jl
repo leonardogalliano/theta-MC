@@ -39,13 +39,21 @@ function main(args)
     end
     steps = args["steps"]
     burn = 0
-    block = append!([0], [2^n for n in 0:floor(Int, log2(args["steps"] / args["nblocks"]))])
     λ = args["lambda"]
     steps_per_bias = args["reversible_steps"]
     biastimes = build_schedule(steps, burn, steps_per_bias)
+    block = append!([0], [2^n for n in 0:floor(Int, log2(args["steps"] / args["nblocks"]))])
     sampletimes = build_schedule(steps, burn, block)
-    # sampletimes_bias = build_schedule(steps, burn, steps_per_bias)
-    sampletimes_bias = sampletimes # to reduce data size
+    if args["linear_store"] > 0
+        sampletimes = build_schedule(steps, burn, args["linear_store"])
+    end
+    sampletimes2 = sampletimes
+    sampletimes_bias = sampletimes
+    if args["nblocks2"] > 0
+        block2 = append!([0], [2^n for n in 0:floor(Int, log2(args["steps"] / args["nblocks2"]))])
+        sampletimes2 = build_schedule(steps, burn, block2)
+    end
+
     phi = chains[1].density * π * sum(chains[1].species .^ 2) / (4 * N)
     p_or_phi = (isfinite(args["pressure"]) && args["pressure"] > 0) ? "P$(args["pressure"])" : "NVT"
     path = joinpath(args["out_path"], p_or_phi, "lambda$λ", "n$steps_per_bias", "N$N", "M$(length(chains))", "steps$steps", "seed$seed")
@@ -110,7 +118,14 @@ function parse_commandline()
         help = "Number of log2 blocks"
         arg_type = Int
         default = 1
-        arg_type = Float64
+        "--nblocks2"
+        help = "Number of log2 blocks to store trajectories"
+        arg_type = Int
+        default = -1
+        "--linear_store"
+        help = "Store data at linear intervals"
+        arg_type = Int
+        default = 0
         "--out_path"
         help = "Output path"
         arg_type = String

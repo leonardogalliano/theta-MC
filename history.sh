@@ -190,7 +190,7 @@ for P in "${Ps[@]}"; do
 done
 
 
-## Redo lambda test (single configuraiton)
+## Redo lambda test (single configuraiton) SOURCES
 N=200
 steps=100000000
 P=17.0
@@ -199,4 +199,70 @@ n=5
 for lambda in "${lambdas[@]}"; do
     init_file=data/HardDisksSteady/NPT/P$P/rate0.0/N$N/M1/steps50000000/seed1/trajectories/1/lastframe.xyz
     sbatch -J HD -n 1 --output=./log_output/%x.o%j --error=./log_error/%x.e%j --wrap "/home/galliano/julia-1.9.0/bin/julia --project=. -t 1 main.jl $init_file $steps --lambda $lambda -n $n -v --nblocks 10 --out_path data/UmbrellaSampling_SOURCES/P0_$P"
+done
+
+## Steady
+N=200
+steps=10000000
+P=17.0
+lambdas=(0.0 2500.0 5000.0 7500.0 10000.0 15000.0 20000.0)
+n=5
+for lambda in "${lambdas[@]}"; do
+    init_file=data/UmbrellaSampling_SOURCES/P0_$P/NVT/lambda$lambda/n$n/N$N/M1/steps100000000/seed1/trajectories/1/lastframe.xyz
+    sbatch -J HD -n 1 --output=./log_output/%x.o%j --error=./log_error/%x.e%j --wrap "/home/galliano/julia-1.9.0/bin/julia --project=. -t 1 main.jl $init_file $steps --lambda $lambda -n $n -v --linear_store 1000 --nblocks2 1 --out_path data/UmbrellaSampling_STEADY/P0_$P"
+done
+
+## Steady Restart
+N=200
+steps=10000000
+P=17.0
+lambdas=(0.0 2500.0 5000.0 7500.0 10000.0 15000.0 20000.0)
+n=5
+for lambda in "${lambdas[@]}"; do
+    init_file=data/UmbrellaSampling_STEADY/P0_$P/NVT/lambda$lambda/n$n/N$N/M1/steps10000000/seed1/trajectories/1/lastframe.xyz
+    sbatch -J HD -n 1 --output=./log_output/%x.o%j --error=./log_error/%x.e%j --wrap "/home/galliano/julia-1.9.0/bin/julia --project=. -t 1 main.jl $init_file $steps --lambda $lambda -n $n -v --linear_store 100 --nblocks2 1 --out_path data/UmbrellaSampling_STEADY_2/P0_$P"
+done
+
+## Steady Restart 3
+N=200
+steps=50000000
+P=17.0
+lambdas=(0.0 2500.0 5000.0 7500.0 10000.0 15000.0 20000.0)
+n=5
+for lambda in "${lambdas[@]}"; do
+    init_file=data/UmbrellaSampling_STEADY_2/P0_$P/NVT/lambda$lambda/n$n/N$N/M1/steps10000000/seed1/trajectories/1/lastframe.xyz
+    sbatch -J HD -n 1 --output=./log_output/%x.o%j --error=./log_error/%x.e%j --wrap "/home/galliano/julia-1.9.0/bin/julia --project=. -t 1 main.jl $init_file $steps --lambda $lambda -n $n -v --linear_store 100 --nblocks2 1 --out_path data/UmbrellaSampling_STEADY_3/P0_$P"
+done
+
+## REDO multiple configurations
+N=200
+steps=20000000
+P=17.0
+M=24
+init_file=data/NO_OVERLAPS/eta1.4/eps0.2/phi0.5/N$N
+sbatch -J HD -n $M --output=./log_output/%x.o%j --error=./log_error/%x.e%j --wrap "/home/galliano/julia-1.9.0/bin/julia --project=. -t $M hard_disk_script.jl $steps $N $P --init_file $init_file -M $M --nblocks 10 -v --out_path data/SOURCES"
+
+## Multiple configurations for clean theta vs t
+N=200
+steps=100000000
+P=17.0
+M=24
+lambdas=(0.0 2500.0 5000.0 7500.0 10000.0 15000.0 20000.0)
+n=5
+for lambda in "${lambdas[@]}"; do
+    init_file=data/SOURCES/NPT/P$P/rate0.0/N$N/M$M/steps20000000/seed1/trajectories/
+    sbatch -J HD -n $M --output=./log_output/%x.o%j --error=./log_error/%x.e%j --wrap "/home/galliano/julia-1.9.0/bin/julia --project=. -t $M main.jl $init_file $steps --lambda $lambda -n $n -v --nblocks 1 --out_path data/UmbrellaSampling_MULTI/P0_$P"
+done
+
+## Multiple configurations for clean theta vs t TANNING
+N=200
+steps=100000000
+P=17.0
+M=24
+n=5
+# lambdas=(0.0 2500.0 5000.0 7500.0 10000.0 15000.0 20000.0)
+lambdas=(7500.0 10000.0 15000.0 20000.0)
+for lambda in "${lambdas[@]}"; do
+    init_file=data/SOURCES/NPT/P$P/rate0.0/N$N/M$M/steps20000000/seed1/trajectories/
+    screen -S US_P0_$P -dm julia --project=. -t $M main.jl $init_file $steps --lambda $lambda -n $n -v --nblocks 1 --out_path data/UmbrellaSampling_MULTI/P0_$P
 done
